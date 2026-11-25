@@ -44,7 +44,7 @@ Once installed:
 
 ```sh
 # Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (3350 MiB on 8GB RTX 2070)
-./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf --mmproj /path/to/mmproj-bf16.gguf --moe-cache-mib 3350 --ctx-size 16384 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
+./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf --mmproj /path/to/mmproj-bf16.gguf --moe-cache-mib 2800 --ctx-size 102400 -b 256 -ub 64 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
 ```
 
 <table align="center">

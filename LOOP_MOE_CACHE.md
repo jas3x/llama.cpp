@@ -61,3 +61,24 @@ To reproduce the **29.4 t/s** asymmetric hybrid GGUF locally from the standard `
       Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf \
       Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf \
       Q2_K 16
+
+
+## 100k Context Benchmark (`30.84 t/s` TG / `55.21 t/s` PP on 8 GB RTX 2070)
+Tested at a full **102,400-token context window (`-c 102400`)** with `Q8_0` KV cache (`-ctk q8_0 -ctv q8_0`), `LLAMA_MOE_CACHE_BIAS=0.030`, and `LLAMA_MOE_PRUNE_TAIL=2` on `Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf`:
+
+| VRAM MoE Cache (`--moe-cache-mib`) | Context (`-c`) | KV Cache | Prompt Processing (`PP`) | Token Generation (`TG`) |
+| :--- | :---: | :---: | :---: | :---: |
+| `1800 MiB` | `102,400` | `Q8_0` | `50.42 t/s` | `25.54 t/s` |
+| `2500 MiB` | `102,400` | `Q8_0` | `54.70 t/s` | `30.61 t/s` |
+| **`2800 MiB` (Peak Sweet Spot)** | **`102,400`** | **`Q8_0`** | **`55.21 t/s`** | **`30.84 t/s`** |
+| `3100 MiB` | `102,400` | `Q4_0` | `54.58 t/s` | `29.14 t/s` |
+
+### Optimal 100k Context Launch Command (8 GB VRAM)
+
+    LLAMA_MOE_CACHE_BIAS=0.030 LLAMA_MOE_PRUNE_TAIL=2 \
+    ./build/bin/llama-server \
+      -m ~/models/Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf \
+      --host 127.0.0.1 --port 8080 --cors-origins localhost \
+      -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none \
+      --moe-cache-mib 2800 --moe-cache-cpu-share 0.35 \
+      -c 102400 -b 256 -ub 64 -fa on -ctk q8_0 -ctv q8_0
