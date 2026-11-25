@@ -853,6 +853,26 @@ struct llama_moe_cache::impl {
             l.cpu_acc = acc & 0xffff;
             return (size_t) (acc >> 16);
         };
+        // Invention #2 (Cache-Aware Tail-Expert Pruning): during single-token decode (n_tokens == 1) once cache is warm,
+        // if the lowest-weight tail experts (ranks 6..7 of 0..7) are cold cache misses, alias them to rank 0 instead of
+        // stalling PCIe/CPU for <5% tail weight (controlled via LLAMA_MOE_PRUNE_TAIL, default 2).
+        static const int32_t prune_tail = []() {
+            if (const char * e = getenv("LLAMA_MOE_PRUNE_TAIL"); e != nullptr && *e != 0) {
+                return std::max(0, std::atoi(e));
+            }
+            return 2;
+        }();
+        const int32_t pil = l.phys_il >= 0 ? l.phys_il : il;
+        if (prune_tail > 0 && sel->src[0]->ne[1] == 1 && n_used >= 8 && g.lru.n_filled == g.n_slots) {
+            const int32_t * cur_slots = g.lru.slot_map[pil];
+            const int32_t start_rank = std::max(4, n_used - prune_tail);
+            for (int32_t r = start_rank; r < n_used; ++r) {
+                if (cur_slots[ids[r]] >= g.n_slots) {
+                    ids[r] = ids[0];
+                }
+            }
+        }
+
         size_t n_hit = 0;
         if (!g.lru.plan(il, ids.data(), ids.size(), sel->src[0]->ne[1], n_used, n_zero, n_cpu, fills, cpu, n_hit)) {
             GGML_ABORT("the MoE cache is too small for the experts selected in layer %d", il);
