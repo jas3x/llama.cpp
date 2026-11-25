@@ -1,3 +1,5 @@
+> **Custom Fork (`exp-shared-expert-cache`):** Loop-Aware Physical MoE Cache... See **[LOOP_MOE_CACHE.md](LOOP_MOE_CACHE.md)** for details.
+
 # llama.cpp
 
 ![llama.cpp](https://raw.githubusercontent.com/ggml-org/llama-brand/refs/heads/master/logo/svg/cover/llama-cpp/cover-llama-cpp-dark.svg)
@@ -43,8 +45,8 @@ irm https://llama.app/install.ps1 | iex
 Once installed:
 
 ```sh
-# Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (3350 MiB on 8GB RTX 2070)
-./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf --mmproj /path/to/mmproj-bf16.gguf --moe-cache-mib 2800 --ctx-size 102400 -b 256 -ub 64 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
+# Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (2800 MiB on 8GB RTX 2070 — 30.84 t/s at 100k context)
+LLAMA_MOE_CACHE_BIAS=0.030 LLAMA_MOE_PRUNE_TAIL=2 ./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none --moe-cache-cpu-share 0.35 --moe-cache-mib 2800 --ctx-size 102400 -b 256 -ub 64 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
 ```
 
 <table align="center">
