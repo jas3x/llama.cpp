@@ -3,7 +3,7 @@
 ## Overview
 Looped Mixture-of-Experts architectures such as **Inkling-2-Mini (`inkling2_loop`)** contain 24 physical layers where the middle 12 layers (`layers 6..17`) execute **3 times per token** (48 total layer visits per token, routing 8 of 128 experts per pass).
 
-In upstream `llama.cpp` (`src/llama-moe-cache.cpp`), `llama_moe_cache` indexed cache entries by **virtual layer index (`0..47`)** rather than **canonical physical weight tensor (`0..23`)**, causing three bottlenecks on VRAM-constrained GPUs (e.g., 8 GB RTX 2070):
+In upstream `llama.cpp` (`src/llama-moe-cache.cpp`), `llama_moe_cache` indexed cache entries by **virtual layer index (`0..47`)** rather than **canonical physical weight tensor (`0..23`)**, causing three bottlenecks on VRAM-constrained GPUs (such as an 8 GB RTX 2070):
 1. **3x Cache Fragmentation & Overwritten Tensor Bindings:** Virtual passes `6..17`, `24..35`, and `36..47` pointed to the same underlying `ggml_tensor *` weights (`ffn_gate_up_exps`, `ffn_down_exps`), yet `bindings[w]` was overwritten three times while `slot_map` and `moe_cache_lru` tracked 48 separate virtual layers—forcing identical physical experts to be re-uploaded over PCIe up to 3 times per token.
 2. **Inflated Host-Byte Accounting:** `host_bytes` summed all 48 virtual layers (~22.1 GiB) instead of the 24 physical layers (~11.0 GiB).
 3. **Uniform Eviction Priority:** Single-pass outer layers (`0..5`, `18..23`) evicted 3x-visited loop-core experts (`6..17`) at equal weight.
@@ -23,15 +23,14 @@ Model: `Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (26.07B params, 12.41 GiB, `n_c
 | **Patched `exp-shared-expert-cache`** | **0.50** | **`40.8 t/s`** | **`22.7 t/s`** | **+65.9% PP / +32.7% TG** |
 
 ## Build & Run Commands
-```bash
-cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75 -DLLAMA_CURL=ON
-cmake --build build --config Release -j \$(nproc)
 
-./build/bin/llama-server \
-  -m ~/models/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf \
-  --alias "inkling-2-mini-uncensored" \
-  --host 127.0.0.1 --port 8080 --cors-origins localhost \
-  -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none \
-  --moe-cache-mib 3800 --moe-cache-cpu-share 0.35 \
-  -c 16384 -b 512 -ub 256 -fa on -ctk q8_0 -ctv q8_0
-```
+    cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75 -DLLAMA_CURL=ON
+    cmake --build build --config Release -j $(nproc)
+
+    ./build/bin/llama-server \
+      -m ~/models/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf \
+      --alias "inkling-2-mini-uncensored" \
+      --host 127.0.0.1 --port 8080 --cors-origins localhost \
+      -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none \
+      --moe-cache-mib 3800 --moe-cache-cpu-share 0.35 \
+      -c 16384 -b 512 -ub 256 -fa on -ctk q8_0 -ctv q8_0
