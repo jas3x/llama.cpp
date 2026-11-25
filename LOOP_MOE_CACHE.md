@@ -47,3 +47,17 @@ Model: `Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (26.07B params, 12.41 GiB, `n_c
 * **Measured Impact (`--temp 0` Dijkstra benchmark, `3800 MiB` pre-warmed VRAM cache):**
   * `LLAMA_MOE_PRUNE_TAIL=0`: `52.4 t/s` prompt / `26.0 t/s` generation
   * `LLAMA_MOE_PRUNE_TAIL=2`: **`53.3 t/s` prompt / `27.9 t/s` generation** (+79.0% over `15.59 t/s` upstream baseline)
+
+## Optional Model Recipe: Asymmetric Quantization Tiering (`29.4 t/s` TG / `59.0 t/s` PP)
+To reproduce the **29.4 t/s** asymmetric hybrid GGUF locally from the standard `Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (preserving 100% of the 3x-looped core `blk.6..17` and all attention projections at original precision while quantizing only the single-pass outer MoE experts to `Q2_K`):
+
+    ./build/bin/llama-quantize \
+      --allow-requantize \
+      --output-tensor-type q6_K \
+      --token-embedding-type q6_K \
+      --tensor-type "attn_.*=q8_0" \
+      --tensor-type "blk\.(6|7|8|9|10|11|12|13|14|15|16|17)\.ffn_gate_up_exps=iq3_s" \
+      --tensor-type "blk\.(6|7|8|9|10|11|12|13|14|15|16|17)\.ffn_down_exps=iq4_nl" \
+      Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf \
+      Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf \
+      Q2_K 16
