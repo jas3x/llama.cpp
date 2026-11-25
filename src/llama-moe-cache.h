@@ -42,6 +42,9 @@ public:
     // the experts of w in the cache, nullptr if w is not cached
     ggml_tensor * get_experts(const ggml_tensor * w) const;
 
+    // device-resident F32 [n_expert] tie-breaking bias for experts currently resident in VRAM cache
+    ggml_tensor * get_resident_bias(int32_t il) const;
+
     // the graph of a MoE layer, built by llm_graph_context::build_moe_ffn in two steps:
 
     // 1. the lookup of the selected experts in the cache, built after the expert input and before the expert matmuls

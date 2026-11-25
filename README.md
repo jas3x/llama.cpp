@@ -3,7 +3,7 @@
 > **Custom Fork Modification:** Deduplicates physical expert tensors across looped transformer passes (`inkling2_loop`) and prioritizes 3x-visited loop-core layers (`layers 6..17`) in VRAM, eliminating 3x PCIe cache fragmentation on VRAM-constrained GPUs (tested on **RTX 2070 8 GB + i7-13700K + 32 GB DDR5-5600**).
 >
 > * **+65.9% faster prompt processing** (`40.8 t/s` vs `24.6 t/s` stock MoE cache)
-> * **+35.1% faster token generation** (`23.1–24.5 t/s` vs `17.1 t/s` stock MoE cache / `15.59 t/s` CPU-offload baseline)
+> * **+35.1% faster token generation** (`23.1–25.3 t/s` vs `17.1 t/s` stock MoE cache / `15.59 t/s` CPU-offload baseline)
 > * Full architecture notes & reproduction commands: **[`LOOP_MOE_CACHE.md`](LOOP_MOE_CACHE.md)**
 
 ---

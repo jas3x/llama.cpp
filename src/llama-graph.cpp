@@ -2469,10 +2469,16 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
         cb(selection_probs, "ffn_moe_probs_masked", il);
     }
 
-    // select experts
+    // select experts (with optional zero-skill-loss VRAM residency tie-breaking bias)
     ggml_tensor * selected_experts = selected_experts_in;
     if (selected_experts == nullptr) {
-        selected_experts = ggml_argsort_top_k(ctx0, selection_probs, n_expert_used); // [n_expert_used, n_tokens]
+        ggml_tensor * topk_inp = selection_probs;
+        if (moe_cache != nullptr && n_tokens > 0 && n_tokens <= 8) {
+            if (ggml_tensor * rbias = moe_cache->get_resident_bias(il)) {
+                topk_inp = ggml_add(ctx0, topk_inp, rbias);
+            }
+        }
+        selected_experts = ggml_argsort_top_k(ctx0, topk_inp, n_expert_used); // [n_expert_used, n_tokens]
         cb(selected_experts->src[0], "ffn_moe_argsort", il);
     }
     cb(selected_experts, "ffn_moe_topk", il);
