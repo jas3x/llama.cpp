@@ -1,17 +1,24 @@
 # llama.cpp — Loop-Aware Physical MoE Cache & Cache-Aware Routing (`exp-shared-expert-cache`)
 
-> **Custom Fork Optimizations (`v1.3-adaptive-tail-prune`):**
-> Tested on **`Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (26.07B looped MoE)** on **RTX 2070 8 GB + i7-13700K + 32 GB DDR5-5600** (compatible with all MoE GGUF models using `--moe-cache-mib`):
-> 1. **Physical-Tensor Loop Deduplication** (`src/llama-moe-cache.cpp`)
-> 2. **3.0x Loop-Core Priority Caching** (`moe_cache_lru`)
-> 3. **Cache-Aware Top-K Tie-Breaking** (`LLAMA_MOE_CACHE_BIAS`, `src/llama-graph.cpp`)
-> 4. **Persistent Hot-Expert Pre-Warming** (`MCP1` profile auto-load, `src/llama-moe-cache.cpp`)
-> 5. **Cache-Aware Tail-Expert Pruning** (`LLAMA_MOE_PRUNE_TAIL`, `src/llama-moe-cache.cpp`)
->
-> * **+79.0% faster token generation** (`27.9 t/s` vs `15.59 t/s` CPU-offload baseline / `17.1 t/s` stock MoE cache)
-> * **+116.7% faster prompt processing** (`53.3 t/s` vs `24.6 t/s` stock MoE cache)
-> * See [`LOOP_MOE_CACHE.md`](LOOP_MOE_CACHE.md) for full technical documentation.
+Run large 26B+ Mixture-of-Experts models at **27.9–29.4 tokens/sec** on 6 GB–12 GB NVIDIA GPUs using loop-aware priority and adaptive tail pruning.
 
+### Quick Build & Run (NVIDIA CUDA)
+```bash
+git clone -b exp-shared-expert-cache https://github.com
+cd llama.cpp
+
+cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75
+cmake --build build --config Release -j\$(nproc)
+
+./build/bin/llama-server \
+  -m /path/to/Inkling-2-Mini-26B.gguf \
+  --mmproj /path/to/mmproj-bf16.gguf \
+  --moe-cache-mib 3350 \
+  --ctx-size 16384 \
+  --cache-type-k q8_0 --cache-type-v q8_0 \
+  --flash-attn on \
+  --host 127.0.0.1 --port 8080
+```
 ---
 
 # llama.cpp
