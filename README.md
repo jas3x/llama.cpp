@@ -5,9 +5,11 @@
 > 1. **Physical-Tensor Loop Deduplication** (`src/llama-moe-cache.cpp`)
 > 2. **3.0x Loop-Core Priority Caching** (`moe_cache_lru`)
 > 3. **Cache-Aware Top-K Tie-Breaking** (`LLAMA_MOE_CACHE_BIAS`, `src/llama-graph.cpp`)
+> 4. **Persistent Hot-Expert Pre-Warming** (`MCP1` profile auto-load, `src/llama-moe-cache.cpp`)
+> 5. **Cache-Aware Tail-Expert Pruning** (`LLAMA_MOE_PRUNE_TAIL`, `src/llama-moe-cache.cpp`)
 >
-> * **+62.3% faster token generation** (`25.3 t/s` vs `15.59 t/s` baseline)
-> * **+65.9% faster prompt processing** (`40.8 t/s` vs `24.6 t/s`)
+> * **+79.0% faster token generation** (`27.9 t/s` vs `15.59 t/s` CPU-offload baseline / `17.1 t/s` stock MoE cache)
+> * **+116.7% faster prompt processing** (`53.3 t/s` vs `24.6 t/s` stock MoE cache)
 > * See [`LOOP_MOE_CACHE.md`](LOOP_MOE_CACHE.md) for full technical documentation.
 
 ---
