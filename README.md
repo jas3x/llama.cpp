@@ -1,6 +1,6 @@
 # llama.cpp — Loop-Aware Physical MoE Cache & Cache-Aware Routing (`exp-shared-expert-cache`)
 
-> **Custom Fork Innovations (`v1.3-adaptive-tail-prune`):**
+> **Custom Fork Optimizations (`v1.3-adaptive-tail-prune`):**
 > Tested on **`Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (26.07B looped MoE)** on **RTX 2070 8 GB + i7-13700K + 32 GB DDR5-5600** (compatible with all MoE GGUF models using `--moe-cache-mib`):
 > 1. **Physical-Tensor Loop Deduplication** (`src/llama-moe-cache.cpp`)
 > 2. **3.0x Loop-Core Priority Caching** (`moe_cache_lru`)

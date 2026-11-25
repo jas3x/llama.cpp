@@ -35,14 +35,14 @@ Model: `Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf` (26.07B params, 12.41 GiB, `n_c
       --moe-cache-mib 3800 --moe-cache-cpu-share 0.35 \
       -c 16384 -b 512 -ub 256 -fa on -ctk q8_0 -ctv q8_0
 
-## Invention #1: Cache-Aware Top-K Tie-Breaking (`LLAMA_MOE_CACHE_BIAS`, `v1.1`)
+## Optimization 1: Cache-Aware Top-K Tie-Breaking (`LLAMA_MOE_CACHE_BIAS`, `v1.1`)
 * **Mechanism (`src/llama-graph.cpp` & `src/llama-moe-cache.cpp`):** Maintains a lightweight device-resident `F32 [n_expert]` bias tensor (`resident_bias`, 512 bytes/layer) on `CUDA0` updated asynchronously alongside `slot_map`. During low-batch decode (`n_tokens <= 8`), adds an epsilon tie-breaking bias (`0.025f` default) exclusively to `selection_probs` before `ggml_argsort_top_k`, while keeping the expert mixing weights `probs` completely unperturbed.
 * **Measured Impact (`--temp 0` Dijkstra benchmark, `3800 MiB` VRAM cache):**
   * `LLAMA_MOE_CACHE_BIAS=0.000`: `23.2 t/s`
   * `LLAMA_MOE_CACHE_BIAS=0.015`: `24.5 t/s`
   * `LLAMA_MOE_CACHE_BIAS=0.030`: **`25.3 t/s`** (+62.3% over `15.59 t/s` upstream baseline)
 
-## Invention #2: Cache-Aware Tail-Expert Pruning (`LLAMA_MOE_PRUNE_TAIL`, `v1.3`)
+## Optimization 2: Cache-Aware Tail-Expert Pruning (`LLAMA_MOE_PRUNE_TAIL`, `v1.3`)
 * **Mechanism (`src/llama-moe-cache.cpp`):** During single-token decode (`n_tokens == 1`) once the VRAM cache is warm, checks the lowest-confidence tail experts (ranks 6..7 of 0..7). If a tail expert is already resident in VRAM, it executes normally; if it is a cold cache miss (`slot >= n_slots`), it aliases to rank 0 to eliminate PCIe upload stalls and DDR5 CPU fallbacks for `<5%` tail weights while keeping all 6 primary experts and recurrent states intact.
 * **Measured Impact (`--temp 0` Dijkstra benchmark, `3800 MiB` pre-warmed VRAM cache):**
   * `LLAMA_MOE_PRUNE_TAIL=0`: `52.4 t/s` prompt / `26.0 t/s` generation
