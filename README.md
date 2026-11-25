@@ -1,4 +1,4 @@
-> **Custom Fork (`exp-shared-expert-cache`):** Loop-Aware Physical MoE Cache... See **[LOOP_MOE_CACHE.md](LOOP_MOE_CACHE.md)** for details.
+> **Custom Fork (`exp-shared-expert-cache`):** Loop-Aware Physical MoE Cache... See **[LOOP_MOE_CACHE.md](LOOP_MOE_CACHE.md)** for architecture, benchmarks & GPU VRAM sizing FAQ.
 
 # llama.cpp
 

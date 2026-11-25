@@ -82,3 +82,24 @@ Tested at a full **102,400-token context window (`-c 102400`)** with `Q8_0` KV c
       -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none \
       --moe-cache-mib 2800 --moe-cache-cpu-share 0.35 \
       -c 102400 -b 256 -ub 64 -fa on -ctk q8_0 -ctv q8_0
+
+
+## FAQ & GPU VRAM Sizing Guide
+
+### Q1: Why does this fork beat stock `llama.cpp` on looped MoE models?
+Looped MoE models like **Inkling-2-Mini (`inkling2_loop`)** have 24 physical layers where layers `6..17` execute **3 times per token** (48 total layer passes). Stock `llama.cpp` indexes the VRAM expert cache by virtual layer index `0..47`, splitting the cache 3x and re-uploading the same physical weights over PCIe up to 3 times per token. This fork aliases virtual loop slots to their canonical physical tensors, applies a **3.0x eviction priority weight** to looped core layers, and combines **Cache-Aware Routing** (`LLAMA_MOE_CACHE_BIAS`) with **Tail-Expert Pruning** (`LLAMA_MOE_PRUNE_TAIL`) to eliminate PCIe stalls.
+
+### Q2: How do I fit 100k context + `Q8_0` KV cache into 8GB VRAM without OOM?
+Always include `--no-op-offload` and `-b 256 -ub 64`. Without those flags, `102400` context allocates a massive 5–16 GB prompt-processing compute buffer on CUDA. *(If you also load a BF16 vision projector `--mmproj`, lower `--moe-cache-mib` by ~800 MiB—for example, `2000` MiB on an 8GB GPU).*
+
+### Q3: Recommended `--moe-cache-mib` settings by GPU VRAM
+
+| GPU VRAM | 16k Context (`Q8_0` KV) | 100k Context (`Q8_0` KV) | Notes |
+| :--- | :---: | :---: | :--- |
+| **6GB GPU** | `1800 MiB` | `1000 MiB` (`Q4_0` KV) | Drop `--mmproj` |
+| **8GB GPU** | `3800 MiB` | `2800 MiB` (**30.96 t/s** on RTX 2070) | Drop `--mmproj` or use `2000 MiB` with vision |
+| **12GB GPU** | `7500 MiB` | `6500 MiB` | Keeps nearly the entire active working set in VRAM |
+| **16GB+ GPU** | `11000 MiB` | `10000 MiB` | Full physical expert pool resident in VRAM |
+
+### Q4: Does this work on standard (non-looped) MoE models?
+Yes. While physical layer deduplication targets looped architectures (like Inkling-2-Mini), **Cache-Aware Top-K Routing** and **Tail-Expert Pruning** automatically accelerate any GGUF MoE model supported by `llama.cpp` (Qwen3 MoE, DeepSeek, Mixtral, GPT-OSS) when experts are offloaded to CPU RAM (`-cmoe`).
