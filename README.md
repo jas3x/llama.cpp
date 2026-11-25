@@ -1,10 +1,13 @@
-# llama.cpp — Loop-Aware Physical-Layer MoE Cache Edition (`exp-shared-expert-cache`)
+# llama.cpp — Loop-Aware Physical MoE Cache & Cache-Aware Routing (`exp-shared-expert-cache`)
 
-> **Custom Fork Modification:** Deduplicates physical expert tensors across looped transformer passes (`inkling2_loop`) and prioritizes 3x-visited loop-core layers (`layers 6..17`) in VRAM, eliminating 3x PCIe cache fragmentation on VRAM-constrained GPUs (tested on **RTX 2070 8 GB + i7-13700K + 32 GB DDR5-5600**).
+> **Custom Fork Innovations (`v1.1-cache-aware-routing`):**
+> 1. **Physical-Tensor Loop Deduplication** (`src/llama-moe-cache.cpp`)
+> 2. **3.0x Loop-Core Priority Caching** (`moe_cache_lru`)
+> 3. **Cache-Aware Top-K Tie-Breaking** (`LLAMA_MOE_CACHE_BIAS`, `src/llama-graph.cpp`)
 >
-> * **+65.9% faster prompt processing** (`40.8 t/s` vs `24.6 t/s` stock MoE cache)
-> * **+35.1% faster token generation** (`23.1–25.3 t/s` vs `17.1 t/s` stock MoE cache / `15.59 t/s` CPU-offload baseline)
-> * Full architecture notes & reproduction commands: **[`LOOP_MOE_CACHE.md`](LOOP_MOE_CACHE.md)**
+> * **+62.3% faster token generation** (`25.3 t/s` vs `15.59 t/s` baseline)
+> * **+65.9% faster prompt processing** (`40.8 t/s` vs `24.6 t/s`)
+> * See [`LOOP_MOE_CACHE.md`](LOOP_MOE_CACHE.md) for full technical documentation.
 
 ---
 
