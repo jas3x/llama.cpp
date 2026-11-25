@@ -45,7 +45,7 @@ irm https://llama.app/install.ps1 | iex
 Once installed:
 
 ```sh
-# Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (2800 MiB on 8GB RTX 2070 — 30.84 t/s at 100k context)
+# Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (2800 MiB on 8GB RTX 2070 — 30.96 t/s at 100k context)
 LLAMA_MOE_CACHE_BIAS=0.030 LLAMA_MOE_PRUNE_TAIL=2 ./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-Asym-IQ3S-Q2K.gguf -np 1 -t 8 -cmoe -ngl 99 --no-op-offload --load-mode none --moe-cache-cpu-share 0.35 --moe-cache-mib 2800 --ctx-size 102400 -b 256 -ub 64 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
 ```
 

@@ -352,6 +352,7 @@ struct llama_moe_cache::impl {
         int32_t loop_visits = 1;            // number of times this physical layer executes per token
         ggml_tensor * slot_map = nullptr;   // I32 [1, n_expert] in host memory
         ggml_tensor * resident_bias = nullptr; // F32 [n_expert] in device memory (epsilon tie-breaker)
+        std::vector<float> bias_host;          // persistent host staging buffer for async DMA
         ggml_tensor * slot_map_cpu = nullptr; // looked up in place of slot_map by the graphs with a CPU part, if cpu_share > 0, its data is not used
         ggml_tensor * cpu_map  = nullptr;   // I32 [1, n_expert] in host memory, if cpu_share > 0
         std::vector<int32_t> cpu_experts;   // experts set in cpu_map
@@ -874,7 +875,7 @@ struct llama_moe_cache::impl {
         }
 
         size_t n_hit = 0;
-        if (!g.lru.plan(il, ids.data(), ids.size(), sel->src[0]->ne[1], n_used, n_zero, n_cpu, fills, cpu, n_hit)) {
+        if (!g.lru.plan(pil, ids.data(), ids.size(), sel->src[0]->ne[1], n_used, n_zero, n_cpu, fills, cpu, n_hit)) {
             GGML_ABORT("the MoE cache is too small for the experts selected in layer %d", il);
         }
         if (has_cpu) {
@@ -917,13 +918,13 @@ struct llama_moe_cache::impl {
         if (l.resident_bias != nullptr) {
             const int32_t n_exp = (int32_t) l.slot_map->ne[1];
             const int32_t * slots = (const int32_t *) l.slot_map->data;
-            std::vector<float> bias_host(n_exp, 0.0f);
+            l.bias_host.assign(n_exp, 0.0f);
             for (int32_t e = 0; e < n_exp; ++e) {
                 if (slots[e] < g.n_slots) {
-                    bias_host[e] = cache_bias;
+                    l.bias_host[e] = cache_bias;
                 }
             }
-            ggml_backend_tensor_set_async(backend, l.resident_bias, bias_host.data(), 0, bias_host.size()*sizeof(float));
+            ggml_backend_tensor_set_async(backend, l.resident_bias, l.bias_host.data(), 0, l.bias_host.size()*sizeof(float));
         }
 
         return true;
