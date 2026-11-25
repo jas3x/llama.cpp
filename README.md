@@ -1,26 +1,3 @@
-# llama.cpp — Loop-Aware Physical MoE Cache & Cache-Aware Routing (`exp-shared-expert-cache`)
-
-Run large 26B+ Mixture-of-Experts models at **27.9–29.4 tokens/sec** on 6 GB–12 GB NVIDIA GPUs using loop-aware priority and adaptive tail pruning.
-
-### Quick Build & Run (NVIDIA CUDA)
-```bash
-git clone -b exp-shared-expert-cache https://github.com
-cd llama.cpp
-
-cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=75
-cmake --build build --config Release -j\$(nproc)
-
-./build/bin/llama-server \
-  -m /path/to/Inkling-2-Mini-26B.gguf \
-  --mmproj /path/to/mmproj-bf16.gguf \
-  --moe-cache-mib 3350 \
-  --ctx-size 16384 \
-  --cache-type-k q8_0 --cache-type-v q8_0 \
-  --flash-attn on \
-  --host 127.0.0.1 --port 8080
-```
----
-
 # llama.cpp
 
 ![llama.cpp](https://raw.githubusercontent.com/ggml-org/llama-brand/refs/heads/master/logo/svg/cover/llama-cpp/cover-llama-cpp-dark.svg)
@@ -66,11 +43,8 @@ irm https://llama.app/install.ps1 | iex
 Once installed:
 
 ```sh
-# Download and run a model directly from Hugging Face
-llama cli -hf ggml-org/Qwen3.5-0.8B-GGUF
-
-# Launch OpenAI-compatible API server
-llama serve -hf ggml-org/Qwen3.5-0.8B-GGUF
+# Launch Inkling-2-Mini (26B MoE) with Loop-Aware VRAM Expert Cache (3350 MiB on 8GB RTX 2070)
+./build/bin/llama-server -m /path/to/Inkling-2-Mini-Uncensored-AD-IQ3_S.gguf --mmproj /path/to/mmproj-bf16.gguf --moe-cache-mib 3350 --ctx-size 16384 --cache-type-k q8_0 --cache-type-v q8_0 --flash-attn on --host 127.0.0.1 --port 8080
 ```
 
 <table align="center">
