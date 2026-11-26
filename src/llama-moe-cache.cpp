@@ -637,16 +637,16 @@ struct llama_moe_cache::impl {
                     }
                 }
             }
-        }
-        // Alias virtual loop layers to their canonical physical layer's slot maps (also needed during no_alloc sizing)
-        for (size_t il = 0; il < layers.size(); ++il) {
-            const int32_t pil = layers[il].phys_il;
-            if (pil >= 0 && pil != (int32_t) il && layers[pil].ig >= 0) {
-                layers[il].ig            = layers[pil].ig;
-                layers[il].slot_map      = layers[pil].slot_map;
-                layers[il].slot_map_cpu  = layers[pil].slot_map_cpu;
-                layers[il].cpu_map       = layers[pil].cpu_map;
-                layers[il].resident_bias = layers[pil].resident_bias;
+            // Alias virtual loop layers to their canonical physical layer's slot maps
+            for (size_t il = 0; il < layers.size(); ++il) {
+                const int32_t pil = layers[il].phys_il;
+                if (pil >= 0 && pil != (int32_t) il && layers[pil].ig >= 0) {
+                    layers[il].ig            = layers[pil].ig;
+                    layers[il].slot_map      = layers[pil].slot_map;
+                    layers[il].slot_map_cpu  = layers[pil].slot_map_cpu;
+                    layers[il].cpu_map       = layers[pil].cpu_map;
+                    layers[il].resident_bias = layers[pil].resident_bias;
+                }
             }
         }
 
