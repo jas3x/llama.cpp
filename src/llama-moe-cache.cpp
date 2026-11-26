@@ -353,6 +353,7 @@ struct llama_moe_cache::impl {
         ggml_tensor * slot_map = nullptr;   // I32 [1, n_expert] in host memory
         ggml_tensor * resident_bias = nullptr; // F32 [n_expert] in device memory (epsilon tie-breaker)
         std::vector<float> bias_host;          // persistent host staging buffer for async DMA
+        bool               bias_dirty = true;  // true until initial or updated slot_map bias is uploaded
         ggml_tensor * slot_map_cpu = nullptr; // looked up in place of slot_map by the graphs with a CPU part, if cpu_share > 0, its data is not used
         ggml_tensor * cpu_map  = nullptr;   // I32 [1, n_expert] in host memory, if cpu_share > 0
         std::vector<int32_t> cpu_experts;   // experts set in cpu_map
@@ -636,16 +637,16 @@ struct llama_moe_cache::impl {
                     }
                 }
             }
-            // Alias virtual loop layers to their canonical physical layer's slot maps
-            for (size_t il = 0; il < layers.size(); ++il) {
-                const int32_t pil = layers[il].phys_il;
-                if (pil >= 0 && pil != (int32_t) il && layers[pil].ig >= 0) {
-                    layers[il].ig            = layers[pil].ig;
-                    layers[il].slot_map      = layers[pil].slot_map;
-                    layers[il].slot_map_cpu  = layers[pil].slot_map_cpu;
-                    layers[il].cpu_map       = layers[pil].cpu_map;
-                    layers[il].resident_bias = layers[pil].resident_bias;
-                }
+        }
+        // Alias virtual loop layers to their canonical physical layer's slot maps (also needed during no_alloc sizing)
+        for (size_t il = 0; il < layers.size(); ++il) {
+            const int32_t pil = layers[il].phys_il;
+            if (pil >= 0 && pil != (int32_t) il && layers[pil].ig >= 0) {
+                layers[il].ig            = layers[pil].ig;
+                layers[il].slot_map      = layers[pil].slot_map;
+                layers[il].slot_map_cpu  = layers[pil].slot_map_cpu;
+                layers[il].cpu_map       = layers[pil].cpu_map;
+                layers[il].resident_bias = layers[pil].resident_bias;
             }
         }
 
@@ -779,7 +780,8 @@ struct llama_moe_cache::impl {
         }
 
         // large batches only read the cache, so the experts used in generation stay in it
-        const int32_t * slots = g.lru.slot_map[b.il];
+        const int32_t pil = layers[b.il].phys_il >= 0 ? layers[b.il].phys_il : b.il;
+        const int32_t * slots = g.lru.slot_map[pil];
         if (slots == nullptr || slots[e] >= g.n_slots) {
             return 0;
         }
@@ -915,7 +917,7 @@ struct llama_moe_cache::impl {
 
         // the next copy synchronizes the backend before it changes the slot map again
         ggml_backend_tensor_set_async(backend, dst, l.slot_map->data, 0, ggml_nbytes(l.slot_map));
-        if (l.resident_bias != nullptr) {
+        if (l.resident_bias != nullptr && (!fills.empty() || !cpu.empty() || layers[pil].bias_dirty)) {
             const int32_t n_exp = (int32_t) l.slot_map->ne[1];
             const int32_t * slots = (const int32_t *) l.slot_map->data;
             l.bias_host.assign(n_exp, 0.0f);
@@ -925,6 +927,7 @@ struct llama_moe_cache::impl {
                 }
             }
             ggml_backend_tensor_set_async(backend, l.resident_bias, l.bias_host.data(), 0, l.bias_host.size()*sizeof(float));
+            layers[pil].bias_dirty = false;
         }
 
         return true;
